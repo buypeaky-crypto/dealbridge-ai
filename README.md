@@ -17,7 +17,7 @@ Vanilla HTML/CSS/JavaScript, Vercel serverless Node.js functions, Google Gemini 
 
 ## Environment variables
 - `GEMINI_API_KEY` — optional for AI quote generation; fallback is clearly labeled.
-- `GEMINI_MODEL` — optional; defaults to `gemini-2.5-flash`.
+- `GEMINI_MODEL` — optional; defaults to `gemini-3.8-flash`.
 - `OWNER_APPROVAL_CODE` — required; private code, minimum 16 characters.
 - `QUOTE_SIGNING_SECRET` — required; random server-only secret, minimum 32 characters.
 - `PAYPAL_CLIENT_ID` — PayPal app client ID.
