@@ -30,7 +30,7 @@ Important data limitations:
 - This is a view of stored webhook events, not a complete payment/order ledger.
 - Simulator events are explicitly marked and excluded from verified PayPal KPI totals.
 - No quote records are persisted yet, so quote totals, quote-to-payment conversion, AI-provider success rates and customer-level analytics are not reported.
-- The dashboard loads up to 500 stored webhook records per request.
+- The dashboard loads up to 500 stored webhook records per request; the API does not currently guarantee chronological pagination.
 - The shared owner code is a prototype authentication mechanism, not full identity/session authentication or tenant isolation.
 
 ## Stack
