@@ -27,7 +27,7 @@ This plan uses partner tools where they improve the product or strengthen judgin
 - Dashboard separates registered PayPal webhook events from sandbox simulator events; simulator data is excluded from real PayPal capture and refund KPIs.
 - AG Studio 3.1.0 is loaded from its version-pinned CDN. Owner can create and edit reports over a sanitized event dataset.
 - Required Vercel variable: AG_STUDIO_LICENSE_KEY. It is returned only after dashboard authentication because AG Studio's JavaScript licence API validates the key client-side.
-- Current metrics are limited to the stored webhook history (up to 500 rows). Quote/order persistence, quote conversion and AI-provider analytics are not yet implemented.
+- Current metrics are limited to up to 500 returned stored webhook rows; chronological pagination is not yet implemented. Quote/order persistence, quote conversion and AI-provider analytics are not yet implemented.
 
 ## Integrations and benefits to claim next
 
