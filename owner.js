@@ -81,7 +81,7 @@ async function loadDashboard() {
     renderEventTable();
     renderStudio(config);
     $("last-updated").textContent = "Updated " + new Date(data.generatedAt).toLocaleString();
-    if (data.truncatedPossible) $("event-count").textContent += " · Showing latest 500 stored records; older records may be omitted.";
+    if (data.truncatedPossible) $("event-count").textContent += " · Showing up to 500 stored records; older records may be omitted.";
   } catch (error) {
     $("login-status").textContent = error.message;
     if (!sessionToken()) signOut(error.message);
