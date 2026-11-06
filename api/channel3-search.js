@@ -39,18 +39,20 @@ export default async function handler(req, res) {
         let url = "";
         try { const parsed = new URL(rawUrl); if (parsed.protocol === "https:") url = parsed.toString().slice(0, 1000); } catch {}
         return {
-          merchant: String(offer.merchant?.name || offer.merchant_name || offer.retailer || offer.merchant || "Retailer").slice(0, 100),
+          merchant: String(offer.merchant?.name || offer.merchant_name || offer.retailer || offer.domain || offer.merchant || "Retailer").slice(0, 100),
           price: Number.isFinite(numericPrice) && numericPrice > 0 ? numericPrice : null,
           currency,
-          url
+          url,
+          availability: String(offer.availability || "Unknown").slice(0, 40)
         };
       }).filter(offer => offer.price !== null || offer.url) : [];
-      const rawImage = product.image_url || product.image?.url || product.image || product.images?.[0]?.url || "";
+      const imageItem = Array.isArray(product.images) ? product.images.find(image => image?.is_main_image) || product.images[0] : null;
+      const rawImage = product.image_url || product.image?.url || (typeof product.image === "string" ? product.image : "") || imageItem?.cleaned_url || imageItem?.url || "";
       let imageUrl = "";
       try { const parsed = new URL(rawImage); if (parsed.protocol === "https:") imageUrl = parsed.toString().slice(0, 1000); } catch {}
       return {
         title: String(product.title || product.name || product.product_title || "Product").slice(0, 200),
-        brand: String(product.brand?.name || product.brand || "").slice(0, 100),
+        brand: String(product.brand?.name || product.brand || product.brands?.[0]?.name || "").slice(0, 100),
         imageUrl,
         offers
       };
