@@ -49,7 +49,6 @@ async function persistVerifiedEvent(event){
       method:"POST",
       headers:{
         apikey:key,
-        Authorization:"Bearer "+key,
         "Content-Type":"application/json",
         Prefer:"resolution=ignore-duplicates,return=minimal"
       },
