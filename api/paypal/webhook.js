@@ -44,7 +44,7 @@ async function persistVerifiedEvent(event){
   };
 
   const response=await fetch(
-    url.replace(/\\/$/,"")+"/rest/v1/paypal_webhook_events?on_conflict=event_id",
+    (url.endsWith("/")?url.slice(0,-1):url)+"/rest/v1/paypal_webhook_events?on_conflict=event_id",
     {
       method:"POST",
       headers:{
