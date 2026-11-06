@@ -1,57 +1,75 @@
 # DealBridge AI
 
-**From customer request to server-approved quote to PayPal payment.**
+**From customer request to owner-approved quote to PayPal payment.**
 
-DealBridge AI drafts editable quotes with Gemini and automatically falls back to OpenRouter's free-model router when Gemini is unavailable. The business owner reviews the quote and obtains server-side approval before PayPal checkout is enabled.
+DealBridge AI uses AI to turn a customer's service request into an editable quote. A business owner reviews the scope and amount, explicitly approves it on the server, and only then can the customer pay through PayPal Sandbox.
 
-## Flow
-1. Customer submits a request; Gemini drafts scope, USD price, delivery, and terms.
-2. If Gemini is not configured, fails, times out, or returns invalid content, OpenRouter's free-model router is tried automatically.
-3. If both AI providers fail or are not configured, a clearly labeled editable fallback draft is shown.
-4. Owner edits the draft and enters a private approval code.
-5. The server validates the code and signs the quote with a 30-minute HMAC token.
-6. PayPal order creation accepts only a valid, unexpired signed quote; price is taken from the signed payload, not browser-submitted fields.
-7. Before capture, the server retrieves the PayPal order and checks status, DealBridge custom ID, USD currency, and amount; it verifies the completed capture and matching amount.
-8. The webhook endpoint verifies PayPal event signatures, then stores a minimal event record in Supabase. Event IDs are unique, so repeated PayPal deliveries do not create duplicate rows; a database failure returns HTTP 500 so PayPal can retry.
+## How it works
+
+1. Customer enters a service request.
+2. Gemini drafts the scope, USD price, delivery estimate and terms.
+3. If Gemini is unavailable, fails, times out or produces invalid content, OpenRouter's free-model router is tried automatically.
+4. For product-sourcing jobs, the customer may optionally enter a separate product query. Channel3 returns real product listings, retailer offers, prices and product links. Only that separate product query is sent to Channel3; it is not sent customer names, emails or the whole service request.
+5. The AI may use the returned product references as context, but they are not a guarantee of stock, a supplier commitment or the final cost.
+6. If both AI providers fail, the app shows an editable fallback quote.
+7. The owner edits the draft and enters a private approval code.
+8. The server validates the code and signs the quote with a 30-minute HMAC token.
+9. PayPal order creation accepts only a valid, unexpired signed quote. The price is taken from the signed payload, not browser-submitted fields.
+10. Before capture, the server retrieves the PayPal order and checks the order status, DealBridge custom ID, USD currency and amount. It then verifies the completed capture and matching amount.
+11. The webhook endpoint verifies PayPal event signatures and stores a minimal event record in Supabase. Event IDs are unique; duplicate deliveries are ignored.
 
 ## Stack
-Vanilla HTML/CSS/JavaScript, Vercel serverless Node.js functions, Gemini API, OpenRouter API, PayPal Orders v2 API, and Supabase for verified webhook-event storage.
 
-## Environment variables
-- \`GEMINI_API_KEY\` — optional primary AI provider key.
-- \`GEMINI_MODEL\` — optional; defaults to \`gemini-3.8-flash\`.
-- \`OPENROUTER_API_KEY\` — optional backup AI provider key. Store only in Vercel server-side environment variables.
-- \`OPENROUTER_MODEL\` — optional; defaults to \`openrouter/free\`, which routes to an available free model.
-- \`OWNER_APPROVAL_CODE\` — required; private code, minimum 16 characters.
-- \`QUOTE_SIGNING_SECRET\` — required; random server-only secret, minimum 32 characters.
-- \`PAYPAL_CLIENT_ID\` — PayPal app client ID.
-- \`PAYPAL_CLIENT_SECRET\` — PayPal app secret, server-side only.
-- \`PAYPAL_ENV\` — use \`sandbox\` for testing.
-- \`PAYPAL_WEBHOOK_ID\` — webhook ID from the same PayPal environment.
-- \`SUPABASE_URL\` — server-side Supabase project URL.
-- \`SUPABASE_SERVICE_ROLE_KEY\` — server-only Supabase secret/service-role key; never expose it to the browser.
+Vanilla HTML/CSS/JavaScript, Vercel serverless Node.js functions, Gemini API, OpenRouter API, Channel3 product API, PayPal Orders v2 API and Supabase webhook-event storage.
 
-Never expose owner codes, signing secrets, AI provider keys, or PayPal secrets in browser code or GitHub.
+## Vercel environment variables
+
+- **GEMINI_API_KEY** — optional primary AI provider key.
+- **GEMINI_MODEL** — optional; defaults to gemini-3.8-flash.
+- **OPENROUTER_API_KEY** — optional backup AI provider key. Store only server-side in Vercel.
+- **OPENROUTER_MODEL** — optional; defaults to openrouter/free.
+- **CHANNEL3_API_KEY** — optional key for on-demand product and retailer price research.
+- **OWNER_APPROVAL_CODE** — required; private code, minimum 16 characters.
+- **QUOTE_SIGNING_SECRET** — required; random server-only secret, minimum 32 characters.
+- **PAYPAL_CLIENT_ID** — PayPal app client ID.
+- **PAYPAL_CLIENT_SECRET** — PayPal app secret, server-side only.
+- **PAYPAL_ENV** — keep set to sandbox for the hackathon.
+- **PAYPAL_WEBHOOK_ID** — webhook ID from the same PayPal environment.
+- **SUPABASE_URL** — server-side Supabase project URL.
+- **SUPABASE_SERVICE_ROLE_KEY** — server-only Supabase service-role key; never expose it to the browser.
+
+Never expose owner codes, signing secrets, AI provider keys or PayPal secrets in browser code or GitHub.
 
 ## AI provider behavior
-Gemini is attempted first. Channel3 can be called on demand for product price references when the customer clicks the product-research button. OpenRouter is attempted automatically if Gemini is absent, unavailable, times out, or returns an unusable draft. The default OpenRouter model is \`openrouter/free\`; its selected model and capacity can change, and free-model requests are rate limited. The app always retains an editable fallback. An AI draft is never an approved quote and cannot unlock checkout by itself.
+
+Gemini is attempted first. OpenRouter is attempted automatically if Gemini is missing, unavailable, times out or returns an unusable draft. The default OpenRouter model is openrouter/free, which routes to an available free model. Free models are rate limited and availability varies. The app always retains an editable fallback. An AI draft is never an approved quote and cannot unlock checkout by itself.
+
+## Channel3 hackathon credits
+
+Sign up at https://trychannel3.com/developers and use promo code **PAYPAL-HACKATHON-2026** to claim the hackathon's 20,000 free product-search credits. The optional product query is separate from the customer request. Channel3's attributed retailer links may earn commissions when users click and purchase, subject to its terms and eligible offers.
 
 ## Local run
-Install Vercel CLI, configure environment variables with \`vercel env add\`, then run \`vercel dev\`.
 
-## Privacy
-Only the customer request description is sent to the configured AI provider; customer name and email are not included in the AI prompt. Provider data handling depends on the selected model and its serving provider. Use synthetic demo details and do not enter real customer personal data, payment details, or confidential business information.
+Install the Vercel CLI, configure environment variables with vercel env add, then run vercel dev.
 
 ## Postman API tests
-Import \`postman/DealBridge-AI.postman_collection.json\` into Postman. Set \`baseUrl\` to the deployed demo URL. Set \`ownerCode\` as a secret/secret-vault variable only when testing the owner approval route. The collection includes quote generation, owner approval, PayPal Sandbox order creation, and capture requests. Use sandbox buyer credentials only; never use live PayPal credentials or real payment details.
+
+Import postman/DealBridge-AI.postman_collection.json into Postman. Set baseUrl to the deployed demo URL. Store ownerCode as a secret environment variable; never export or commit an environment containing secrets. The collection covers quote generation, owner approval, PayPal Sandbox order creation and capture. After request 03, open the saved approveUrl in a browser, approve with a Sandbox buyer account, and then run request 04. Use sandbox buyer credentials only.
 
 ## Hackathon sponsor integrations
-See \`HACKATHON_SPONSORS.md\` for sponsor tool roles, access links, and implementation notes.
 
-## Security scope / demo limitations
-This is a hackathon MVP, not a production payment platform. Signed approvals prevent changing the amount after approval, and PayPal order details are checked before capture. The shared owner code is a prototype, not full identity/session authentication. Approval tokens are not persisted or consumed, so one-time use/revocation is not enforced. Verified webhook events are stored in the Supabase \`paypal_webhook_events\` table with a unique event ID and minimal event data. Duplicate deliveries are ignored by the database. There is no customer authentication, tenant isolation, refund workflow, or production monitoring.
+See HACKATHON_SPONSORS.md for sponsor tool roles, access links and implementation notes. Not every partner is integrated into the running app; the guide distinguishes live code changes from recommended tooling and future extensions.
 
-Keep \`PAYPAL_ENV=sandbox\`. Do not accept real payments until proper owner authentication, persistent quote/order records, one-time approval consumption, durable webhook processing, and a security review are completed.
+## Privacy
+
+Customer name and email are not included in prompts sent to AI providers. Only the service request and, when supplied, the separate Channel3 product references are passed to Gemini/OpenRouter. Only the standalone product query is sent to Channel3. Provider data handling depends on the selected model and the provider's terms. Use synthetic details only; do not enter real customer personal data, payment details or confidential business information.
+
+## Security scope and demo limitations
+
+This is a hackathon MVP, not a production payment platform. Signed approvals prevent changing the amount after approval, and PayPal order details are checked before capture. The shared owner code is a prototype, not full identity/session authentication. Approval tokens are not persisted or consumed, so one-time use and revocation are not enforced. Verified webhook events are stored in the Supabase paypal_webhook_events table with a unique event ID and minimal event data. There is no customer authentication, tenant isolation, refund workflow or production monitoring.
+
+Keep PAYPAL_ENV=sandbox. Do not accept real payments until proper owner authentication, persistent quote/order records, one-time approval consumption, durable webhook processing and a security review are completed.
 
 ## License
-MIT. See [LICENSE](LICENSE).
+
+MIT. See LICENSE.
