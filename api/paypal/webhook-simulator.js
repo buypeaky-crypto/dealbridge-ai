@@ -78,9 +78,14 @@ async function verifySimulatorSignature(rawBody, headers) {
     return { valid: false, reason: "invalid_certificate_url" };
   }
 
+  // PayPal's simulator can use the legacy api-m.paypal.com certificate
+  // host even when the listener itself is running in Sandbox. Keep this
+  // strict exact-host allowlist; never fetch arbitrary certificate URLs.
   const allowedHosts = new Set([
     "api-m.sandbox.paypal.com",
-    "api.sandbox.paypal.com"
+    "api.sandbox.paypal.com",
+    "api-m.paypal.com",
+    "api.paypal.com"
   ]);
 
   if (
@@ -88,9 +93,15 @@ async function verifySimulatorSignature(rawBody, headers) {
     !allowedHosts.has(cert.hostname) ||
     !cert.pathname.startsWith("/v1/notifications/certs/") ||
     cert.username ||
-    cert.password
+    cert.password ||
+    cert.port
   ) {
-    return { valid: false, reason: "certificate_url_not_allowed" };
+    return {
+      valid: false,
+      reason: "certificate_url_not_allowed",
+      certHost: cert.hostname,
+      certPath: cert.pathname
+    };
   }
 
   const certResponse = await fetch(cert.toString(), {
