@@ -87,7 +87,7 @@ export default async function handler(req, res) {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
           body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(3500)
+          signal: AbortSignal.timeout(4000)
         }
       );
       const bodyText = await response.text();
@@ -129,7 +129,6 @@ export default async function handler(req, res) {
           model,
           temperature: 0.2,
           max_tokens: 900,
-          response_format: { type: "json_object" },
           messages: [
             { role: "system", content: systemInstruction },
             { role: "user", content: userPrompt }
