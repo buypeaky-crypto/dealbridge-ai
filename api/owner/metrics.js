@@ -4,7 +4,7 @@ function mapEvent(row) {
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
   const resource = payload.resource && typeof payload.resource === "object" ? payload.resource : {};
   const amount = resource.amount && typeof resource.amount === "object" ? resource.amount : {};
-  const amountValue = Number(amount.value);
+  const amountValue = amount.value == null ? null : Number(amount.value);
   const verificationMode = String(payload.verification_mode || "unknown");
 
   return {
@@ -12,8 +12,8 @@ function mapEvent(row) {
     eventType: String(row.event_type || ""),
     resourceId: row.resource_id ? String(row.resource_id) : "",
     status: row.payment_status ? String(row.payment_status) : "",
-    amount: Number.isFinite(amountValue) && amountValue >= 0 ? amountValue : null,
-    currency: String(amount.currency_code || "").toUpperCase(),
+    amount: amountValue !== null && Number.isFinite(amountValue) && amountValue >= 0 ? amountValue : null,
+    currency: /^[A-Z]{3}$/.test(String(amount.currency_code || "").toUpperCase()) ? String(amount.currency_code).toUpperCase() : "",
     createdAt: payload.create_time ? String(payload.create_time) : "",
     source: verificationMode === "paypal_registered_webhook"
       ? "registered_webhook"
