@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
   const systemInstruction = [
     "You are a careful sales assistant for a small business.",
     "Turn the customer's request into a concise quote draft.",
