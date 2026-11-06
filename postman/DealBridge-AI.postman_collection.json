@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "DealBridge AI — PayPal Sandbox API",
-    "description": "API regression checks for AI quote generation, server-side owner approval and PayPal Sandbox order creation. Use synthetic data only. Do not put secrets in this collection or commit exported environments. Capture an order through the browser PayPal Sandbox flow so the buyer approval step is exercised.",
+    "description": "API regression checks for AI quote generation, server-side owner approval and PayPal Sandbox order creation. Use synthetic data only. Do not put secrets in this collection or commit exported environments. Capture an order through the browser PayPal Sandbox flow so the buyer approval step is exercised. After request 03, open the saved approveUrl in a browser and approve with a PayPal Sandbox buyer account before running request 04.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -139,7 +139,8 @@
             "paypal",
             "create-order"
           ]
-        }
+        },
+        "description": "Creates a PayPal Sandbox order from the server-signed approval token. After the test sets approveUrl, open that URL in a browser and approve with a Sandbox buyer account. Only then run request 04 to capture and verify the completed capture."
       },
       "event": [
         {
@@ -153,7 +154,8 @@
               "  pm.expect(data.id).to.be.a('string').and.not.empty;",
               "});",
               "pm.environment.set('orderID', data.id);",
-              "console.log('Sandbox order created:', data.id);"
+              "console.log('Sandbox order created:', data.id);",
+              "pm.environment.set('approveUrl', data.approveUrl || '');"
             ]
           }
         }
@@ -188,7 +190,8 @@
             "paypal",
             "capture-order"
           ]
-        }
+        },
+        "description": "Run only after completing buyer approval at {{approveUrl}} in a browser using a PayPal Sandbox buyer account. This endpoint captures only an approved DealBridge order and verifies the completed USD capture."
       },
       "event": [
         {
@@ -246,6 +249,10 @@
     },
     {
       "key": "quoteProvider",
+      "value": ""
+    },
+    {
+      "key": "approveUrl",
       "value": ""
     }
   ]
