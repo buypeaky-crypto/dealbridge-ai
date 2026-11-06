@@ -1,13 +1,8 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-
   const { request } = req.body || {};
-  if (typeof request !== "string" || request.trim().length < 12) {
-    return res.status(400).json({ error: "Please provide more detail about the request." });
-  }
-  if (request.length > 5000) {
-    return res.status(400).json({ error: "Please keep the request under 5,000 characters." });
-  }
+  if (typeof request !== "string" || request.trim().length < 12) return res.status(400).json({ error: "Please provide more detail about the request." });
+  if (request.length > 5000) return res.status(400).json({ error: "Please keep the request under 5,000 characters." });
 
   const fallback = {
     scope: "Deliver the service described by the customer. Confirm exact deliverables, exclusions, and acceptance criteria with the customer before work begins.",
@@ -15,16 +10,6 @@ export default async function handler(req, res) {
     delivery: "To be agreed",
     terms: "Final scope and delivery date subject to owner confirmation."
   };
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(200).json({
-      ...fallback, ai: false,
-      error: "Gemini is not configured. Add GEMINI_API_KEY in Vercel Environment Variables."
-    });
-  }
-
-  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
   const systemInstruction = [
     "You are a careful sales assistant for a small business.",
     "Turn the customer's request into a concise quote draft.",
@@ -32,122 +17,154 @@ export default async function handler(req, res) {
     "Suggest a reasonable price in USD, not a binding offer.",
     "Return only a JSON object with scope (string), amount (number), delivery (string), and terms (string).",
     "Keep amount positive and no greater than 100000.",
-    "Make clear that the business owner must review and approve the quote."
+    "Make clear that the business owner must review and approve the quote.",
+    "Do not invent product availability, supplier commitments, or shipping costs."
   ].join(" ");
 
-  const payload = {
-    systemInstruction: { parts: [{ text: systemInstruction }] },
-    contents: [{ role: "user", parts: [{ text: request.trim() }] }],
-    generationConfig: {
-      temperature: 0.2,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          scope: { type: "STRING" },
-          amount: { type: "NUMBER" },
-          delivery: { type: "STRING" },
-          terms: { type: "STRING" }
-        },
-        required: ["scope", "amount", "delivery", "terms"]
-      }
+  function parseQuoteText(text) {
+    if (typeof text !== "string" || !text.trim()) throw new Error("empty_generation");
+    let candidate = text.trim();
+    const fenced = candidate.match(/\x60{3}(?:json)?\s*([\s\S]*?)\x60{3}/i);
+    if (fenced) candidate = fenced[1].trim();
+    if (!candidate.startsWith("{")) {
+      const start = candidate.indexOf("{");
+      const end = candidate.lastIndexOf("}");
+      if (start < 0 || end <= start) throw new Error("invalid_json");
+      candidate = candidate.slice(start, end + 1);
     }
-  };
+    const parsed = JSON.parse(candidate);
+    const amount = Number(parsed.amount);
+    if (!parsed || typeof parsed !== "object" || typeof parsed.scope !== "string" || !parsed.scope.trim() || !Number.isFinite(amount) || amount <= 0 || amount > 100000) {
+      throw new Error("invalid_quote");
+    }
+    return {
+      scope: parsed.scope.trim().slice(0, 4000),
+      amount: Number(amount.toFixed(2)),
+      delivery: String(parsed.delivery || "To be agreed").slice(0, 500),
+      terms: String(parsed.terms || "Subject to business owner approval.").slice(0, 1000)
+    };
+  }
 
-  let data;
-  let lastStatus = 0;
-
-  // Retry once for transient provider failures; bound each request to keep
-  // the serverless function responsive and preserve the editable fallback.
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  async function callGemini() {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return { skipped: true, reason: "not_configured" };
+    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const payload = {
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      contents: [{ role: "user", parts: [{ text: request.trim() }] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            scope: { type: "STRING" },
+            amount: { type: "NUMBER" },
+            delivery: { type: "STRING" },
+            terms: { type: "STRING" }
+          },
+          required: ["scope", "amount", "delivery", "terms"]
+        }
+      }
+    };
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent",
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
           body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(4000)
+          signal: AbortSignal.timeout(3500)
         }
       );
-
-      const responseText = await response.text();
+      const bodyText = await response.text();
       let body = {};
-      try { body = responseText ? JSON.parse(responseText) : {}; } catch { body = {}; }
-
-      if (response.ok) {
-        data = body;
-        break;
+      try { body = bodyText ? JSON.parse(bodyText) : {}; } catch { body = {}; }
+      if (!response.ok) {
+        console.error("Gemini quote request failed:", {
+          status: response.status,
+          providerCode: body.error?.status || body.error?.code || "provider_error",
+          model
+        });
+        return { error: "http_error", status: response.status };
       }
-
-      lastStatus = response.status;
-      console.error("Gemini quote request failed:", {
-        status: lastStatus,
-        providerCode: body.error?.status || body.error?.code || "provider_error",
-        model,
-        attempt: attempt + 1
-      });
-
-      if (![429, 500, 502, 503, 504].includes(response.status) || attempt === 1) break;
+      const generatedText = body.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
+      return { quote: parseQuoteText(generatedText), provider: "gemini" };
     } catch (error) {
-      console.error("Gemini quote request transport failure:", {
-        reason: error.name === "TimeoutError" || error.name === "AbortError" ? "timeout" : "network_error",
-        model,
-        attempt: attempt + 1
+      console.error("Gemini quote request failed:", {
+        reason: error.name === "TimeoutError" || error.name === "AbortError" ? "timeout" : "generation_or_parse_error",
+        model
       });
-      if (attempt === 1) break;
+      return { error: "generation_or_parse_error" };
     }
-
-    await new Promise(resolve => setTimeout(resolve, 250));
   }
 
-  if (!data) {
-    const error = lastStatus === 404
-      ? "Gemini could not find the configured model. Check GEMINI_MODEL and the API key's project access."
-      : lastStatus === 400
-        ? "Gemini rejected the request. Check the configured model and API settings."
-        : lastStatus
-          ? `Gemini is temporarily unavailable (HTTP ${lastStatus}). Please retry; the editable fallback is ready.`
-          : "Gemini did not respond in time. Please retry; the editable fallback is ready.";
-    return res.status(200).json({ ...fallback, ai: false, error });
+  async function callOpenRouter() {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) return { skipped: true, reason: "not_configured" };
+    const model = process.env.OPENROUTER_MODEL || "openrouter/free";
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://dealbridge-ai-two.vercel.app",
+          "X-Title": "DealBridge AI"
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.2,
+          max_tokens: 900,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemInstruction },
+            { role: "user", content: request.trim() }
+          ]
+        }),
+        signal: AbortSignal.timeout(3500)
+      });
+      const bodyText = await response.text();
+      let body = {};
+      try { body = bodyText ? JSON.parse(bodyText) : {}; } catch { body = {}; }
+      if (!response.ok) {
+        console.error("OpenRouter quote request failed:", {
+          status: response.status,
+          providerCode: body.error?.code || "provider_error",
+          model
+        });
+        return { error: "http_error", status: response.status };
+      }
+      const messageContent = body.choices?.[0]?.message?.content;
+      const generatedText = Array.isArray(messageContent) ? messageContent.map(part => part.text || "").join("") : messageContent;
+      return { quote: parseQuoteText(generatedText), provider: "openrouter" };
+    } catch (error) {
+      console.error("OpenRouter quote request failed:", {
+        reason: error.name === "TimeoutError" || error.name === "AbortError" ? "timeout" : "generation_or_parse_error",
+        model
+      });
+      return { error: "generation_or_parse_error" };
+    }
   }
 
-  const generatedText = data.candidates?.[0]?.content?.parts
-    ?.map(part => part.text || "")
-    .join("")
-    .trim();
+  const primary = await callGemini();
+  if (primary.quote) return res.status(200).json({ ...primary.quote, ai: true, provider: primary.provider });
 
-  if (!generatedText) {
-    console.error("Gemini returned no quote content:", {
-      model, finishReason: data.candidates?.[0]?.finishReason || "unknown"
-    });
-    return res.status(200).json({
-      ...fallback, ai: false,
-      error: "Gemini returned an empty draft. Please retry; the editable fallback is ready."
-    });
+  const backup = await callOpenRouter();
+  if (backup.quote) {
+    console.info("Quote generated by backup provider:", backup.provider);
+    return res.status(200).json({ ...backup.quote, ai: true, provider: backup.provider });
   }
 
-  try {
-    const parsed = JSON.parse(generatedText);
-    const amount = Number(parsed.amount);
-    if (
-      typeof parsed.scope !== "string" || !parsed.scope.trim() ||
-      !Number.isFinite(amount) || amount <= 0 || amount > 100000
-    ) throw new Error("Gemini returned an invalid quote");
-
-    return res.status(200).json({
-      scope: parsed.scope.trim().slice(0, 4000),
-      amount,
-      delivery: String(parsed.delivery || "To be agreed").slice(0, 500),
-      terms: String(parsed.terms || "Subject to business owner approval.").slice(0, 1000),
-      ai: true,
-      provider: "gemini"
-    });
-  } catch (error) {
-    console.error("Gemini quote response validation failed:", error.message);
-    return res.status(200).json({
-      ...fallback, ai: false,
-      error: "Gemini returned an invalid quote format. Please retry; the editable fallback is ready."
-    });
+  let error;
+  if (primary.skipped && backup.skipped) {
+    error = "AI quote generation is not configured. Add GEMINI_API_KEY or OPENROUTER_API_KEY in Vercel. The editable fallback is ready.";
+  } else if (backup.skipped && primary.status) {
+    error = "Gemini is temporarily unavailable (HTTP " + primary.status + "). Add OPENROUTER_API_KEY to enable automatic backup; the editable fallback is ready.";
+  } else if (backup.skipped) {
+    error = "Gemini could not prepare a quote and OpenRouter is not configured. Add OPENROUTER_API_KEY in Vercel; the editable fallback is ready.";
+  } else {
+    error = "Gemini and the OpenRouter backup are temporarily unavailable. The editable fallback is ready; please retry shortly.";
   }
+  return res.status(200).json({ ...fallback, ai: false, provider: "fallback", error });
 }
