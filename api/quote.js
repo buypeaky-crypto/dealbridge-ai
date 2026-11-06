@@ -54,11 +54,7 @@ export default async function handler(req, res) {
           contents: [{
             role: "user",
             parts: [{
-              text: JSON.stringify({
-                request: request.trim(),
-                customer: typeof customer === "string" ? customer.slice(0, 160) : "",
-                email: typeof email === "string" ? email.slice(0, 254) : ""
-              })
+              text: request.trim()
             }]
           }],
           generationConfig: {
