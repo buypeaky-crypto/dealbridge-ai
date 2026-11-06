@@ -30,6 +30,9 @@ Never expose owner codes, signing secrets, or PayPal secrets in browser code or 
 ## Local run
 Install Vercel CLI, configure environment variables with `vercel env add`, then run `vercel dev`.
 
+## Privacy
+The Gemini request includes only the customer request description; the customer name and email are not sent to Gemini. The free Gemini tier may use submitted prompts and responses to improve Google products. Use synthetic demo details and do not enter real customer personal data, payment details, or confidential business information.
+
 ## Security scope / demo limitations
 This is a hackathon MVP, not a production payment platform. Signed approvals prevent changing the amount after approval, and PayPal order details are checked before capture. The shared owner code is a prototype, not full identity/session authentication. Approval tokens are not persisted or consumed, so one-time use/revocation is not enforced. Webhook signatures are verified but events are not stored in a durable idempotent ledger. There is no customer authentication, tenant isolation, refund workflow, or production monitoring.
 
