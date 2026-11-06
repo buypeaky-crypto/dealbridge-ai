@@ -7,7 +7,8 @@ export const config = {
 const ALLOWED_EVENTS = new Set([
   "PAYMENT.CAPTURE.COMPLETED",
   "PAYMENT.CAPTURE.DENIED",
-  "PAYMENT.CAPTURE.REFUNDED"
+  "PAYMENT.CAPTURE.REFUNDED",
+  "PAYMENT.SALE.COMPLETED"
 ]);
 
 function requestId(req) {
@@ -16,14 +17,12 @@ function requestId(req) {
 }
 
 async function readRawBody(req) {
-  if (Buffer.isBuffer(req.body)) return req.body;
-  if (typeof req.body === "string") return Buffer.from(req.body);
-
-  if (req.body && typeof req.body === "object") {
-    throw new Error("Raw request body was parsed before signature verification.");
-  }
-
+  // Do not access req.body: Vercel's Node helper lazily parses JSON there,
+  // consuming the stream and changing the bytes needed for PayPal CRC32.
   if (typeof req[Symbol.asyncIterator] !== "function") {
+    const raw = req.rawBody;
+    if (Buffer.isBuffer(raw)) return raw;
+    if (typeof raw === "string") return Buffer.from(raw);
     throw new Error("Request stream is unavailable for raw-body verification.");
   }
 
