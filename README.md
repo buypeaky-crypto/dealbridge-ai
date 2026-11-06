@@ -34,7 +34,7 @@ Vanilla HTML/CSS/JavaScript, Vercel serverless Node.js functions, Gemini API, Op
 Never expose owner codes, signing secrets, AI provider keys, or PayPal secrets in browser code or GitHub.
 
 ## AI provider behavior
-Gemini is attempted first. OpenRouter is attempted automatically if Gemini is absent, unavailable, times out, or returns an unusable draft. The default OpenRouter model is \`openrouter/free\`; its selected model and capacity can change, and free-model requests are rate limited. The app always retains an editable fallback. An AI draft is never an approved quote and cannot unlock checkout by itself.
+Gemini is attempted first. Channel3 can be called on demand for product price references when the customer clicks the product-research button. OpenRouter is attempted automatically if Gemini is absent, unavailable, times out, or returns an unusable draft. The default OpenRouter model is \`openrouter/free\`; its selected model and capacity can change, and free-model requests are rate limited. The app always retains an editable fallback. An AI draft is never an approved quote and cannot unlock checkout by itself.
 
 ## Local run
 Install Vercel CLI, configure environment variables with \`vercel env add\`, then run \`vercel dev\`.
