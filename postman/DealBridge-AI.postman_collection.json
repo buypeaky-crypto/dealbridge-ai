@@ -73,7 +73,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ownerCode\": \"{{ownerCode}}\",\n  \"quote\": {\n    \"scope\": \"{{quoteScope}}\",\n    \"amount\": {{quoteAmount}},\n    \"delivery\": \"{{quoteDelivery}}\",\n    \"terms\": \"{{quoteTerms}}\"\n  }\n}",
+          "raw": "{{approveQuotePayload}}",
           "options": {
             "raw": {
               "language": "json"
@@ -93,6 +93,24 @@
         }
       },
       "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const payload = {",
+              "  ownerCode: pm.environment.get('ownerCode'),",
+              "  quote: {",
+              "    scope: pm.environment.get('quoteScope') || '',",
+              "    amount: Number(pm.environment.get('quoteAmount')),",
+              "    delivery: pm.environment.get('quoteDelivery') || '',",
+              "    terms: pm.environment.get('quoteTerms') || ''",
+              "  }",
+              "};",
+              "pm.variables.set('approveQuotePayload', JSON.stringify(payload));"
+            ]
+          }
+        },
         {
           "listen": "test",
           "script": {
@@ -254,6 +272,11 @@
     {
       "key": "approveUrl",
       "value": ""
+    },
+    {
+      "key": "approveQuotePayload",
+      "value": "",
+      "type": "secret"
     }
   ]
 }
