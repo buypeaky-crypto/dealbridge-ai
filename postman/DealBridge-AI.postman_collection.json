@@ -1,0 +1,252 @@
+{
+  "info": {
+    "name": "DealBridge AI — PayPal Sandbox API",
+    "description": "API regression checks for AI quote generation, server-side owner approval and PayPal Sandbox order creation. Use synthetic data only. Do not put secrets in this collection or commit exported environments. Capture an order through the browser PayPal Sandbox flow so the buyer approval step is exercised.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 — Draft AI quote (Gemini → OpenRouter fallback)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"request\": \"Create a simple logo and visual brand identity for a fictional coffee shop called Blue Oak Coffee. Include deliverables, estimated price, and delivery timeline.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/quote",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "quote"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const data = pm.response.json();",
+              "pm.test('Quote response has usable fields', function () {",
+              "  pm.expect(data.scope).to.be.a('string').and.not.empty;",
+              "  pm.expect(Number(data.amount)).to.be.greaterThan(0);",
+              "  pm.expect(data.delivery).to.be.a('string');",
+              "  pm.expect(data.terms).to.be.a('string');",
+              "  pm.expect(data.ai).to.be.a('boolean');",
+              "});",
+              "pm.environment.set('quoteScope', data.scope);",
+              "pm.environment.set('quoteAmount', String(data.amount));",
+              "pm.environment.set('quoteDelivery', data.delivery);",
+              "pm.environment.set('quoteTerms', data.terms);",
+              "pm.environment.set('quoteProvider', data.provider || 'fallback');",
+              "console.log('Quote provider:', data.provider || 'fallback');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Owner approval (server signs quote)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ownerCode\": \"{{ownerCode}}\",\n  \"quote\": {\n    \"scope\": \"{{quoteScope}}\",\n    \"amount\": {{quoteAmount}},\n    \"delivery\": \"{{quoteDelivery}}\",\n    \"terms\": \"{{quoteTerms}}\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/paypal/approve-quote",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "paypal",
+            "approve-quote"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Owner approval accepted', function () { pm.response.to.have.status(200); });",
+              "const data = pm.response.json();",
+              "pm.test('Server returns a signed approval token', function () {",
+              "  pm.expect(data.approvalToken).to.be.a('string').and.not.empty;",
+              "  pm.expect(data.expiresIn).to.eql(1800);",
+              "});",
+              "pm.environment.set('approvalToken', data.approvalToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — Create PayPal Sandbox order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"approvalToken\": \"{{approvalToken}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/paypal/create-order",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "paypal",
+            "create-order"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('PayPal Sandbox order created', function () { pm.response.to.have.status(200); });",
+              "const data = pm.response.json();",
+              "pm.test('PayPal order ID returned', function () {",
+              "  pm.expect(data.id).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.environment.set('orderID', data.id);",
+              "console.log('Sandbox order created:', data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 — Capture PayPal Sandbox order (after buyer approval)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"orderID\": \"{{orderID}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/paypal/capture-order",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "paypal",
+            "capture-order"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Capture confirmed only after PayPal buyer approval', function () { pm.response.to.have.status(200); });",
+              "const data = pm.response.json();",
+              "pm.test('PayPal confirms completed capture', function () {",
+              "  pm.expect(data.status).to.eql('COMPLETED');",
+              "  pm.expect(data.captureId).to.be.a('string').and.not.empty;",
+              "  pm.expect(data.currency).to.eql('USD');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://dealbridge-ai-two.vercel.app"
+    },
+    {
+      "key": "ownerCode",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "quoteScope",
+      "value": ""
+    },
+    {
+      "key": "quoteAmount",
+      "value": "250"
+    },
+    {
+      "key": "quoteDelivery",
+      "value": "To be agreed"
+    },
+    {
+      "key": "quoteTerms",
+      "value": "Subject to business owner approval."
+    },
+    {
+      "key": "approvalToken",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "orderID",
+      "value": ""
+    },
+    {
+      "key": "quoteProvider",
+      "value": ""
+    }
+  ]
+}
