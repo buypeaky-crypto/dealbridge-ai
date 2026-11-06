@@ -68,14 +68,14 @@ async function verifySimulatorSignature(rawBody, headers) {
     typeof certUrl !== "string" ||
     algorithm !== "SHA256withRSA"
   ) {
-    return false;
+    return { valid: false, reason: "missing_or_invalid_headers" };
   }
 
   let cert;
   try {
     cert = new URL(certUrl);
   } catch {
-    return false;
+    return { valid: false, reason: "invalid_certificate_url" };
   }
 
   const allowedHosts = new Set([
@@ -90,7 +90,7 @@ async function verifySimulatorSignature(rawBody, headers) {
     cert.username ||
     cert.password
   ) {
-    return false;
+    return { valid: false, reason: "certificate_url_not_allowed" };
   }
 
   const certResponse = await fetch(cert.toString(), {
@@ -110,19 +110,51 @@ async function verifySimulatorSignature(rawBody, headers) {
     throw new Error("PayPal returned an invalid certificate.");
   }
 
-  const signedMessage = [
+  const checksum = crc32(rawBody);
+  const baseMessage = [
     transmissionId,
     transmissionTime,
     "WEBHOOK_ID",
-    crc32(rawBody)
+    checksum
   ].join("|");
+  const signature = Buffer.from(transmissionSig, "base64");
 
-  return crypto.verify(
-    "RSA-SHA256",
-    Buffer.from(signedMessage, "utf8"),
-    certificate,
-    Buffer.from(transmissionSig, "base64")
-  );
+  // PayPal's current guide shows both a semicolon-terminated format string
+  // and a sample implementation without the semicolon. Try both formats;
+  // either still requires the full PayPal RSA signature to validate.
+  const candidates = [
+    { format: "without_trailing_semicolon", message: baseMessage },
+    { format: "with_trailing_semicolon", message: baseMessage + ";" }
+  ];
+
+  for (const candidate of candidates) {
+    const valid = crypto.verify(
+      "RSA-SHA256",
+      Buffer.from(candidate.message, "utf8"),
+      certificate,
+      signature
+    );
+
+    if (valid) {
+      return {
+        valid: true,
+        format: candidate.format,
+        checksum,
+        certHost: cert.hostname,
+        bodyBytes: rawBody.length
+      };
+    }
+  }
+
+  return {
+    valid: false,
+    reason: "rsa_signature_mismatch",
+    checksum,
+    certHost: cert.hostname,
+    bodyBytes: rawBody.length,
+    bodySha256: crypto.createHash("sha256").update(rawBody).digest("hex"),
+    signatureBytes: signature.length
+  };
 }
 
 function normalizeResource(resource = {}) {
@@ -240,15 +272,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid event body." });
     }
 
-    const valid = await verifySimulatorSignature(rawBody, req.headers || {});
-    if (!valid) {
+    const signatureCheck = await verifySimulatorSignature(rawBody, req.headers || {});
+    if (!signatureCheck.valid) {
       console.warn("[paypal-simulator] signature verification rejected", {
-        requestId: id
+        requestId: id,
+        ...signatureCheck
       });
       return res.status(400).json({
         error: "Simulator signature verification failed."
       });
     }
+    console.info("[paypal-simulator] signature verified", {
+      requestId: id,
+      format: signatureCheck.format,
+      certHost: signatureCheck.certHost,
+      bodyBytes: signatureCheck.bodyBytes
+    });
 
     let event;
     try {
