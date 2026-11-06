@@ -1,85 +1,105 @@
 # PayPal AI Hackathon sponsor plan for DealBridge AI
 
-Deadline: November 12, 2026 at 12:00 PM Pacific Time. Keep PayPal in Sandbox for the demo.
+Submission deadline: November 12, 2026 at 12:00 PM Pacific Time. Keep PayPal in Sandbox.
 
-This plan uses partner tools where they strengthen the product. It deliberately avoids adding duplicate infrastructure just to display sponsor logos.
+This plan uses partner tools where they improve the product or strengthen judging evidence. It avoids adding duplicate infrastructure just to display sponsor logos.
 
-## Implemented in the repository
+## Already implemented in the repository
 
-### Channel3 — real product-price research
-- Added \`POST /api/channel3-search\` using Channel3's product search API.
-- Added an opt-in "Research product prices with Channel3" control under the customer request.
-- Product references can be passed to Gemini/OpenRouter as context for product-sourcing quotes.
-- The UI treats the data as market references, not guaranteed stock, supplier commitments, or a final payable price.
-- Required environment variable: \`CHANNEL3_API_KEY\`.
-- Claim participant access at https://trychannel3.com/developers and apply promo code \`PAYPAL-HACKATHON-2026\` for 20,000 hackathon API credits. The official sponsor page says no credit card is required and credits cover 20,000 product searches.
+### Channel3 — real product and retailer price research
+- Added the server-side POST endpoint at /api/channel3-search.
+- Added a separate, optional product-query field in the customer form.
+- Returns product titles, images, brands, retailer offers, prices, currencies and links.
+- Passes only the selected product references to Gemini/OpenRouter as context for a product-sourcing quote.
+- Customer names, emails and the full service request are not sent to Channel3.
+- Product listings are references, not guaranteed stock, supplier commitments or a final payable price.
+- Required Vercel environment variable: CHANNEL3_API_KEY.
 
-## Use next / developer workflow
+**Claim the 20,000 hackathon searches:** sign up at https://trychannel3.com/developers and apply promo code PAYPAL-HACKATHON-2026. The official Channel3 sponsor page says no credit card is required and the code provides 20,000 API credits / product searches. Channel3's API returns attributed retailer links; eligible purchases through those links may generate commissions under Channel3's program and payout terms.
 
-### APIMatic — PayPal API context for safer coding
-Use its PayPal Context Plugin while editing or reviewing the PayPal server integration. In the Codespaces terminal, run:
+Sponsor page: https://paypalaihackathon.devpost.com/details/channel3
+API guide: https://channel3.ai/docs/guides/make-a-search
+API schema: https://channel3.ai/docs/guides/response-overview
 
-\`\`\`bash
+## Integrations and benefits to claim next
+
+### APIMatic — PayPal API coding context
+Use the PayPal Context Plugin in the coding assistant to review and improve the existing Orders API, OAuth, capture-verification and webhook implementation against PayPal's API contracts.
+
+In the Codespaces terminal:
+ 
+```bash
 npx context-plugins install paypal
-\`\`\`
+```
 
-Then use the coding agent's PayPal context when reviewing the Orders API, OAuth, capture verification, and webhook logic. PayPal is pre-enabled in the plugin, so the sponsor page says no extra APIMatic credentials are required for this plugin. Participants who use the plugin to build their PayPal integration can claim one month of APIMatic Basic; qualifying winners receive six months of Business. Sponsor prize: $1,000 for each of three winners plus the six-month subscription.
+PayPal is pre-enabled in this plugin. The sponsor page says no extra APIMatic credentials are needed to use the plugin. Participants who use the plugin to build their PayPal integration can claim one month of APIMatic Basic free; qualifying winners receive six months of APIMatic Business. The sponsor prize is $1,000 for each of three winners plus the subscription.
 
-Claim / details: https://paypalaihackathon.devpost.com/details/apimatic
+Sponsor page and subscription claim: https://paypalaihackathon.devpost.com/details/apimatic
 
-### Postman — API regression collection
-Import \`postman/DealBridge-AI.postman_collection.json\` into Postman. It tests quote drafting, owner approval token issuance, PayPal Sandbox order creation, and capture verification after the buyer approval step. Set the collection's \`baseUrl\` and add \`ownerCode\` only as a secret environment variable. Do not export or commit an environment containing secrets.
+### Postman — repeatable API tests
+The repository now includes postman/DealBridge-AI.postman_collection.json. Import it into Postman, set baseUrl, and store ownerCode only as a secret environment variable. The collection exercises AI quote drafting, signed owner approval, PayPal Sandbox order creation and capture verification. Request 03 saves approveUrl; open it in a browser, approve with a Sandbox buyer account, then run request 04. Do not export or commit an environment containing secrets.
 
-PayPal sponsor resources: https://paypalaihackathon.devpost.com/details/postman
+Sponsor page: https://paypalaihackathon.devpost.com/details/postman
 
-### AG Grid / AG Studio — owner payment and quote analytics
-Recommended next feature: an owner-facing dashboard with quote status, verified PayPal capture/refund events, daily totals, AI-provider reliability, filters, and an agent panel that explains unusual trends. Use AG Studio for the embedded, customizable dashboard and its Agent Framework rather than adding an unrelated data grid. Build from the official PayPal + AG Grid workshop / starter to reduce integration risk.
+### AG Grid / AG Studio — owner analytics dashboard
+This is the strongest next product feature and sponsor prize opportunity. Build a real owner dashboard showing verified PayPal captures, quote totals, payment status, refunds when available, quote-to-payment conversion and AI-provider reliability. Add cross-filtering and an agent that can answer questions such as "show me this week's completed payments" or "which quotes failed to convert?" The official challenge specifically encourages custom dashboard widgets, theming, layout tools and the AG Studio Agent Framework—not just a standalone table or chart.
+
+Access: free 45-day AG Studio trial. Use the official PayPal + AG Studio starter to avoid a blank integration.
 
 Sponsor page: https://paypalaihackathon.devpost.com/details/aggrid
-Official PayPal workshop: https://developer.paypal.com/community/blog/PayPal_AG_Grid_Part_1/
-AG Grid says the hackathon judging license is provided, so do not buy a license just for the submission.
+Starter: https://github.com/paypaldev/hackathon-paypal-ag-grid-boilerplate
+Quick start: https://www.ag-grid.com/studio/react/quick-start/
 
-Sponsor prize: $5,000 first, $2,000 second, and three $1,000 third-place awards.
+Sponsor prizes: $5,000 first, $2,000 second, and three $1,000 third-place awards.
 
-## Claim and use credits where they reduce risk
+### Render — background workflows and $50 credits
+Claim the $50 participant credit offer. Keep the live customer app on Vercel; do not migrate hosting during the final week. A useful Render Workflows addition would be retryable post-payment processing: receipt generation, event reconciliation, notifications and daily summaries. This is separate from the immediate PayPal capture response.
 
-### Render — optional background workflow
-Claim the participant offer of $50 Render credits from the sponsor page. Keep the existing Vercel production app in place; do not migrate hosting during the final hackathon week. The best follow-on use is a separate Render Workflow for slow/retryable post-payment tasks (receipt/event reconciliation, notifications, and report generation), with task retries and run observability.
-
+Credits and details: https://paypalaihackathon.devpost.com/details/render
 Workflow docs: https://render.com/docs/workflows
-Claim/details: https://paypalaihackathon.devpost.com/details/render
 
-### KERNEL — remote browser QA
-Claim the $50 KERNEL credit offer. Use its cloud browser to replay the public demo flow on desktop/mobile-sized viewports and capture a repeatable browser session. Keep the test strictly synthetic and use PayPal Sandbox; do not automate live payments or expose owner codes in browser scripts.
+### KERNEL — cloud-browser demo QA and $50 credits
+Claim the $50 participant credits. Use a remote real Chromium browser to run repeatable synthetic end-to-end checks of the deployed request → quote → owner approval → PayPal Sandbox flow, record the session and test desktop/mobile viewports. Do not expose the owner approval code in browser scripts and do not automate live payments.
 
+Credits and docs: https://paypalaihackathon.devpost.com/details/kernel
 Docs: https://www.kernel.sh/docs
-Claim/details: https://paypalaihackathon.devpost.com/details/kernel
 
-### Elastic — payment-event search and audit
-Use Elasticsearch hybrid/vector search for a searchable audit view over verified PayPal webhook events and later saved quote records. Useful questions include "show refunded captures", "find similar payment failures", and "why did quote generation fall back?". Start with the hackathon trial or local Elasticsearch; don't make production depend on a trial that expires during judging.
+### Elastic — searchable payment and quote audit
+Use Elasticsearch hybrid/vector search over verified PayPal webhook events and, once implemented, persisted quote records. A meaningful agent could answer "find similar payment failures" or "summarize refunded transactions" using indexed, verified events. There is a 14-day trial with an extension option for 30 more days; Elasticsearch can also be run locally for free. Avoid making the deployed demo depend on a trial that expires.
 
 Sponsor page: https://paypalaihackathon.devpost.com/details/elastic
+Local download: https://www.elastic.co/downloads/elasticsearch
 
-### Astropods — agent lifecycle and observability
-Use its agent runtime, tool wiring, knowledge stores, secrets, deployment and traces if we decide to turn DealBridge's short quote step into a larger multi-step business agent. It overlaps with Vercel/Render, so keep it as a staging experiment rather than running duplicate production systems before submission.
+### Astropods — agent runtime and observability
+Astropods provides agent deployment, tools, knowledge bases, traces and runtime guardrails. It is useful if DealBridge evolves into a longer-running workflow agent—for example, quote follow-up, status monitoring and payment-event triage. This overlaps with the current Vercel setup, so use it as a controlled prototype rather than adding a second production runtime before the deadline.
 
-Docs: https://docs.astropods.com
+Free account and docs: https://docs.astropods.com
 Sponsor page: https://paypalaihackathon.devpost.com/details/astropods
 
-### Bryntum — delivery scheduling
-Use a Bryntum Scheduler or Gantt timeline for approved jobs: delivery milestones, assigned resources, dependencies, and dates. This becomes valuable once DealBridge persists approved projects. Avoid adding a calendar before we have reliable project records; it would otherwise be a decorative, unsupported feature.
+### Bryntum — post-approval delivery scheduling
+A Bryntum Gantt/Scheduler could show delivery phases and resources for approved work. A compelling PayPal-specific rule is that a milestone is released only after the linked PayPal payment is confirmed; a failed or refunded payment flags dependent work. This needs persistent job data first, so it is a follow-on feature rather than a cosmetic calendar.
 
-Sponsor page: https://paypalaihackathon.devpost.com/details/bryntum
+Bryntum offers a 45-day trial. Scheduler example install:
+ 
+```bash
+npm install @bryntum/scheduler@npm:@bryntum/scheduler-trial
+```
 
-## Order of work before submission
+Sponsor page and downloads: https://paypalaihackathon.devpost.com/details/bryntum
 
-1. Add \`OPENROUTER_API_KEY\` to Vercel and verify Gemini → OpenRouter fallback.
-2. Add \`CHANNEL3_API_KEY\` to Vercel and test a product-sourcing request.
-3. Import and run the Postman collection against Sandbox.
-4. Install the APIMatic PayPal Context Plugin and use it to review the PayPal endpoints.
-5. Build one substantial AG Studio owner dashboard feature; this is the highest-value sponsor prize.
-6. Claim the Render and KERNEL credits, but do not migrate or add production infrastructure unless the feature is actually demonstrated.
-7. Only then consider Elastic search and Bryntum scheduling; use Astropods as an optional agent-runtime experiment.
+## Priority before submission
 
-## Claims and limitations
-Credit/trial offers are participant benefits, not guaranteed cash awards. Account eligibility, expiration and final terms are controlled by each sponsor. Sponsor prize amounts and eligibility are listed in the official Devpost rules. A project can win a maximum of one Grand Prize plus one Sponsor Prize, or one Honorable Mention plus one Sponsor Prize.
+1. Add OPENROUTER_API_KEY to Vercel and verify Gemini → OpenRouter fallback.
+2. Claim Channel3's 20,000 searches, add CHANNEL3_API_KEY to Vercel and test product research.
+3. Import and run the Postman collection against PayPal Sandbox.
+4. Install the APIMatic PayPal Context Plugin and review the PayPal endpoints.
+5. Claim the AG Studio and Bryntum 45-day trials if there is enough time to integrate a real dashboard or delivery schedule. The trial windows can cover the judging period if activated before submission, but confirm trial terms with the sponsor.
+6. Claim Render and KERNEL credits. Add a Render workflow or Kernel browser test only when it can be demonstrated reliably.
+7. Consider Elastic and Astropods after the high-value features above; avoid duplicated infrastructure.
+
+## Important judging and access notes
+
+The official rules require a meaningful PayPal integration and meaningful AI use, and allow these sponsor tools as optional additions. Sponsor cash prizes include AG Grid, APIMatic, Bryntum and Channel3; Render awards Render credits. The rules allow a project to win up to one Grand Prize plus one Sponsor Prize, or one Honorable Mention plus one Sponsor Prize. Tool access, credit eligibility, trial duration and payouts remain subject to each sponsor's official terms.
+
+Official challenge: https://paypalaihackathon.devpost.com/
+Official rules: https://paypalaihackathon.devpost.com/rules
