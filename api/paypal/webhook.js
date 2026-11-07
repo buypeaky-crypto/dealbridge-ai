@@ -243,8 +243,19 @@ export default async function handler(req, res) {
     if (!verification.ok || result.verification_status !== "SUCCESS") {
       console.warn("[paypal-webhook] PayPal rejected webhook signature", {
         requestId: id,
+        eventId: typeof event?.id === "string" ? event.id : "missing",
+        eventType: typeof event?.event_type === "string" ? event.event_type : "missing",
         httpStatus: verification.status,
-        verificationStatus: result.verification_status || "unknown"
+        verificationStatus: result.verification_status || "unknown",
+        paypalDebugId: typeof result.debug_id === "string" ? result.debug_id : null,
+        paypalDetails: Array.isArray(result.details)
+          ? result.details.slice(0, 3).map((item) => ({
+              issue: item.issue || null,
+              description: typeof item.description === "string"
+                ? item.description.slice(0, 160)
+                : null
+            }))
+          : []
       });
       return res.status(400).json({
         error: "Webhook signature verification failed."
