@@ -66,7 +66,6 @@ export default async function handler(req, res) {
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: [{ role: "user", parts: [{ text: userPrompt }] }],
       generationConfig: {
-        temperature: 0.2,
         responseMimeType: "application/json",
         responseSchema: {
           type: "OBJECT",
