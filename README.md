@@ -52,6 +52,10 @@ Sign up at https://trychannel3.com/developers and use promo code **PAYPAL-HACKAT
 
 Install the Vercel CLI, configure environment variables with vercel env add, then run vercel dev.
 
+## Supabase webhook-event table
+
+Before testing webhook persistence in a new Supabase project, apply `supabase/migrations/20261107000000_paypal_webhook_events.sql` in the Supabase SQL Editor. It creates the `paypal_webhook_events` table with a unique event ID and enables row-level security without exposing rows to anonymous or authenticated clients. The webhook writes with the server-only service-role key. This migration is idempotent for an already-created table; confirm its columns match the webhook handler before applying it to an existing custom schema.
+
 ## Postman API tests
 
 Import postman/DealBridge-AI.postman_collection.json into Postman. Set baseUrl to the deployed demo URL. Store ownerCode as a secret environment variable; never export or commit an environment containing secrets. The collection covers quote generation, owner approval, PayPal Sandbox order creation and capture. After request 03, open the saved approveUrl in a browser, approve with a Sandbox buyer account, and then run request 04. Use sandbox buyer credentials only.
