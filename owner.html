@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#101827">
+  <title>Owner Dashboard — DealBridge AI</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/owner.css">
+  <script src="https://cdn.jsdelivr.net/npm/ag-studio@3.1.0/dist/ag-studio.min.js" defer></script>
+  <script src="/owner.js" defer></script>
+</head>
+<body>
+  <header class="top owner-top">
+    <a class="brand" href="/"><span class="mark">D</span> DealBridge <em>AI</em></a>
+    <div class="owner-top-actions"><span class="top-note">PRIVATE OWNER AREA</span><button id="logout" class="secondary" type="button" hidden>Sign out</button></div>
+  </header>
+  <main class="owner-main">
+    <section id="login-panel" class="panel owner-login">
+      <p class="eyebrow">DEALBRIDGE CONTROL CENTER</p>
+      <h1>Owner dashboard</h1>
+      <p class="sub">Sign in with your business owner approval code to view verified PayPal webhook activity.</p>
+      <form id="login-form">
+        <label for="owner-code">Owner approval code</label>
+        <input id="owner-code" type="password" autocomplete="current-password" minlength="16" required placeholder="Enter your private owner code">
+        <button id="login-button" class="primary" type="submit">Unlock dashboard</button>
+      </form>
+      <p id="login-status" class="hint" role="status" aria-live="polite"></p>
+      <a class="back-link" href="/">← Back to DealBridge</a>
+    </section>
+
+    <section id="dashboard" hidden>
+      <div class="dashboard-heading">
+        <div><p class="eyebrow">PAYMENT INTELLIGENCE</p><h1>Owner dashboard</h1><p class="dashboard-sub">Stored PayPal webhook activity. Sandbox simulator records are separated from registered PayPal webhook events.</p></div>
+        <div class="dashboard-actions"><button id="refresh" class="secondary" type="button">Refresh data</button><button id="toggle-mode" class="secondary" type="button">Enable dashboard editing</button></div>
+      </div>
+      <div class="metric-grid">
+        <article class="metric-card"><span>Verified completed payments</span><strong id="metric-completed">—</strong><small>Registered PayPal webhook events only</small></article>
+        <article class="metric-card"><span>Confirmed payment value</span><strong id="metric-volume">—</strong><small>USD amounts in completed events</small></article>
+        <article class="metric-card"><span>Refund events</span><strong id="metric-refunds">—</strong><small>Registered PayPal webhook events only</small></article>
+        <article class="metric-card"><span>Sandbox simulator events</span><strong id="metric-simulated">—</strong><small>Not counted as real PayPal transactions</small></article>
+      </div>
+      <div class="dashboard-note"><strong>Data integrity:</strong> simulator events are labelled separately. This dashboard does not infer quote conversion, customer identity, or unrecorded transactions.</div>
+      <section class="panel activity-panel">
+        <div class="section-heading"><div><p class="eyebrow">RECENT ACTIVITY</p><h2>PayPal event ledger</h2></div><span id="last-updated" class="hint"></span></div>
+        <div class="table-tools"><input id="event-search" type="search" placeholder="Search event type or resource ID" aria-label="Search events"><select id="source-filter" aria-label="Filter event source"><option value="all">All sources</option><option value="registered_webhook">Registered webhooks</option><option value="sandbox_simulator">Sandbox simulator</option><option value="other">Other / legacy</option></select></div>
+        <div class="table-wrap"><table><thead><tr><th>Received</th><th>Event</th><th>Resource</th><th>Status</th><th>Amount</th><th>Source</th></tr></thead><tbody id="event-rows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div>
+        <p id="event-count" class="hint"></p>
+      </section>
+      <section class="panel studio-panel">
+        <div class="section-heading"><div><p class="eyebrow">AG GRID · AG STUDIO</p><h2>Build your own analytics</h2><p class="hint">Use the data panel to create charts, KPI tiles and filtered reports from the verified event dataset.</p></div><span class="status">AG STUDIO</span></div>
+        <div id="studio-warning" class="dashboard-note" hidden></div>
+        <div id="ag-studio" aria-label="AG Studio interactive analytics workspace"></div>
+      </section>
+      <p class="footer-note">Owner session expires after 60 minutes. Dashboard access uses the existing shared owner code; it is a hackathon MVP, not full account authentication.</p>
+    </section>
+  </main>
+</body>
+</html>
